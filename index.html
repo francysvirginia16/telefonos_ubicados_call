@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Dashboard Potencial Call</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f1f2;
+  --s1:#ffffff;
+  --s2:#faf7f8;
+  --s3:#f0eaeb;
+  --bd:#e0d4d6;
+  --green:#1a9e6a;
+  --blue:#c42840;
+  --amber:#d97706;
+  --red:#dc2626;
+  --txt:#1a0d0f;
+  --muted:#8a6068;
+  --dim:#e8dfe0;
+  --f:'DM Sans',sans-serif;
+  --fm:'DM Mono',monospace;
+  --burdo:#8b1c2a;
+  --burdo-light:#c42840;
+  --burdo-bright:#e8304a;
+  --burdo-pale:#fdf0f1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--f);font-size:12px;height:100vh;display:flex;overflow:hidden}
+.sidebar{width:190px;min-width:190px;background:var(--burdo);border-right:none;display:flex;flex-direction:column;overflow-y:auto}
+.sb-logo{padding:14px 14px 10px;font-size:13px;font-weight:600;color:#fff;border-bottom:1px solid rgba(255,255,255,.15)}
+.sb-logo span{color:var(--burdo)}
+.sb-item{padding:9px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.1);border-left:3px solid transparent;transition:all .12s}
+.sb-item:hover{background:rgba(255,255,255,.1)}
+.sb-item.active{background:rgba(255,255,255,.18);border-left-color:#fff}
+.sb-item.active .sb-name{color:#fff;font-weight:600}
+.sb-name{font-size:12px;font-weight:500;display:flex;align-items:center;gap:7px;color:rgba(255,255,255,.85)}
+.sb-val{font-size:10px;font-family:var(--fm);color:rgba(255,255,255,.55)}
+.sb-item.active .sb-val{color:#fff;opacity:.7}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;opacity:.9}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--s1);border-bottom:2px solid var(--burdo);border-left:none;position:relative;padding:12px 20px;flex-shrink:0}
+.topbar-row1{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.topbar-title{font-size:22px;font-weight:600;letter-spacing:-.02em}
+.badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.06em}
+.topbar-sub{font-size:12px;color:var(--muted)}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:12px 16px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.g::before{background:var(--green)}.kpi.b::before{background:linear-gradient(90deg,var(--burdo-light),var(--burdo-bright))}
+.kpi-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.kpi-v{font-size:22px;font-weight:600;font-family:var(--fm);line-height:1}
+.kpi-s{font-size:10px;color:var(--muted);margin-top:4px}
+.content{flex:1;overflow:auto;padding:16px 20px}
+.sec-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--burdo);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--burdo);opacity:.25}
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--bd);margin-bottom:16px}
+table.res{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
+table.res thead th{padding:7px 10px;text-align:right;font-size:10px;font-weight:500;color:var(--burdo);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--bd);background:var(--s2)}
+table.res thead th.tl{text-align:left;padding-left:14px}
+table.res tbody tr{border-bottom:1px solid #151e2c;transition:background .1s;cursor:pointer}
+table.res tbody tr:hover{background:var(--s2)}
+table.res tbody tr.act{background:#fdf0f1}
+table.res tbody tr.tot td{background:var(--s3);font-weight:600;border-top:2px solid var(--burdo-light)}
+table.res td{padding:8px 10px;text-align:right;font-family:var(--fm)}
+table.res td.tl{text-align:left;font-family:var(--f);padding-left:14px}
+.en{font-weight:600;font-size:12px}.es{font-size:10px;color:var(--muted);margin-top:1px}
+.bc{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.bb{width:72px;height:5px;background:var(--dim);border-radius:3px;overflow:hidden;flex-shrink:0}
+.bf{height:100%;border-radius:3px}
+.pt{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;min-width:42px;text-align:center}
+.seg{display:flex;height:4px;border-radius:2px;overflow:hidden;width:72px}
+.bds{border-left:1px solid var(--bd)}
+/* tramo chips */
+.tramo-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tramo-chip{padding:4px 10px;border-radius:20px;border:1px solid var(--bd);background:none;color:var(--muted);font-size:10px;cursor:pointer;transition:all .12s;font-family:var(--f)}
+.tramo-chip:hover{border-color:var(--burdo-light);color:var(--burdo-light)}
+.tramo-chip.on{border-color:var(--burdo-light);background:rgba(196,40,64,.15);color:var(--burdo-light);font-weight:600}
+/* detail panels */
+.det-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.dk{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:10px 12px}
+.dkl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.dkv{font-size:16px;font-weight:600;font-family:var(--fm)}
+.dks{font-size:9px;color:var(--muted);margin-top:2px}
+.ch-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:0}
+.chb{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:12px}
+.cht{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:10px;color:var(--muted);align-items:center}
+.xl-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:6px;border:1px solid rgba(139,28,42,.3);background:rgba(139,28,42,.06);color:var(--burdo);font-size:10px;font-weight:600;cursor:pointer;font-family:var(--f);transition:all .12s;letter-spacing:.03em}
+.xl-btn:hover{background:rgba(139,28,42,.12);border-color:var(--burdo)}
+.xl-btn svg{flex-shrink:0}
+.csv-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:6px;border:1px solid rgba(26,158,106,.4);background:rgba(26,158,106,.08);color:#1a9e6a;font-size:10px;font-weight:600;cursor:pointer;font-family:var(--f);transition:all .12s;letter-spacing:.03em}
+.csv-btn:hover{background:rgba(26,158,106,.15);border-color:#1a9e6a}
+.csv-btn svg{flex-shrink:0}
+#csv-input{display:none}
+.csv-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a9e6a;color:#fff;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:500;z-index:9999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.tbl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.tbl-header .sec-label{margin-bottom:0}
+.tbl-header .sec-label::after{display:none}
+.ldot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px}
+
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sb-logo">Call <span>Dashboard</span></div>
+  <div id="sbItems"></div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-row1">
+      <span class="topbar-title" id="mTitle">Todas las entidades</span>
+      <span class="badge" id="mBadge"></span>
+      <span class="topbar-sub" id="mSub"></span>
+    </div>
+    <div style="position:absolute;top:12px;right:20px;display:flex;gap:6px" id="dlBtns">
+      <label class="csv-btn" title="Cargar nuevo CSV">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Actualizar CSV
+        <input type="file" id="csv-input" accept=".csv">
+      </label>
+      <button class="xl-btn" onclick="exportTodo()" title="Descargar todo como Excel">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar todo
+      </button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi g"><div class="kpi-l">Casos activos</div><div class="kpi-v" id="kv-c">—</div></div>
+      <div class="kpi b"><div class="kpi-l">Teléfonos totales</div><div class="kpi-v" id="kv-t">—</div></div>
+      <div class="kpi g"><div class="kpi-l">Contactados</div><div class="kpi-v" style="color:var(--green)" id="kv-co">—</div><div class="kpi-s" id="kv-ps">—</div></div>
+      <div class="kpi b"><div class="kpi-l">Potencial call</div><div class="kpi-v" style="color:var(--burdo-light)" id="kv-p">—</div><div class="kpi-s">contactados &lt;6 intentos</div></div>
+    </div>
+  </div>
+  <div class="content" id="cnt"></div>
+</div>
+<script>
+const TRAMOS=['0-30d','31-60d','61-90d','91-180d','181-360d','>360d'];
+const TCOLORS=['#4b9fff','#22c98a','#ffc107','#ff6b6b','#a78bfa','#fb923c'];
+
+const CSV_URL='https://raw.githubusercontent.com/francysvirginia16/telefonos_ubicados_call/main/telefonos_ok3.csv';
+const D={};
+const GRAIN=[];
+
+
+const RANGOS=['<$5k','$5k-10k','$10k-20k','$20k-35k','$35k-50k','$50k-100k','$100k-500k','>$500k'];
+
+const ENTS=Object.keys(D);
+const fmt=n=>n.toLocaleString('es-AR');
+const fmts=n=>n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(0)+'k':String(n);
+function pcC(p){return p>=40?'var(--green)':p>=20?'var(--amber)':'var(--red)';}
+function pcBg(p){return p>=40?'rgba(26,158,106,.12)':p>=20?'rgba(217,119,6,.12)':'rgba(220,38,38,.12)';}
+
+let cur='ALL';let charts=[];
+let activeEnts=new Set(Object.keys(D));
+let activeRangos=new Set(RANGOS);
+let activeTramos=new Set(TRAMOS);
+// Per-entity filters (used in detail view)
+let entActiveRangos=new Set(RANGOS);
+let entActiveTramos=new Set(TRAMOS);
+const tC='rgba(26,13,15,.5)',gC='rgba(26,13,15,.08)';
+
+// ── EXCEL EXPORT ──────────────────────────────────────
+function tableToData(rows){
+  // rows is array of objects with the display fields
+  return rows;
+}
+
+function downloadXL(data, sheetName, filename){
+  const ws = XLSX.utils.json_to_sheet(data);
+  // Auto column widths
+  const cols = Object.keys(data[0]||{});
+  ws['!cols'] = cols.map(k=>({wch: Math.max(k.length, ...data.map(r=>String(r[k]||'').length))+2}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
+}
+
+function exportEntidades(){
+  const grain=filteredGrain();
+  const byEnt=aggregateBy(grain,'entidad').sort((a,b)=>a.entidad.localeCompare(b.entidad));
+  const rows=byEnt.map(d=>({
+    'Entidad':d.entidad,
+    'Casos':d.casos,
+    'Teléfonos':d.tels,
+    '% Contacto':d.pct,
+    'Contactados':d.cont,
+    'Sin llamada':d.c_si,
+    '1-3 intentos':d.c_1a3,
+    '4-6 intentos':d.c_4a6,
+    '+6 intentos':d.c_mas6,
+    'Potencial call':d.pot,
+    'Sin contacto':d.sc,
+  }));
+  // Add total row
+  const T=sum(byEnt);
+  rows.push({'Entidad':'TOTAL','Casos':T.casos,'Teléfonos':T.tels,'% Contacto':T.tels?Math.round(T.cont/T.tels*1000)/10:0,
+    'Contactados':T.cont,'Sin llamada':T.c_si,'1-3 intentos':T.c_1a3,'4-6 intentos':T.c_4a6,'+6 intentos':T.c_mas6,'Potencial call':T.pot,'Sin contacto':T.sc});
+  downloadXL(rows,'Entidades','potencial_call_entidades.xlsx');
+}
+
+function exportTramos(){
+  const grain=filteredGrain();
+  const byTramo=aggregateBy(grain,'tramo').sort((a,b)=>TRAMOS.indexOf(a.tramo)-TRAMOS.indexOf(b.tramo));
+  const rows=byTramo.map(d=>({
+    'Tramo':d.tramo,
+    'Casos':d.casos,
+    'Teléfonos':d.tels,
+    '% Contacto':d.pct,
+    'Contactados':d.cont,
+    'Sin llamada':d.c_si,
+    '1-3 intentos':d.c_1a3,
+    '4-6 intentos':d.c_4a6,
+    '+6 intentos':d.c_mas6,
+    'Potencial call':d.pot,
+    'Sin contacto':d.sc,
+  }));
+  const T=sum(byTramo);
+  rows.push({'Tramo':'TOTAL','Casos':T.casos,'Teléfonos':T.tels,'% Contacto':T.tels?Math.round(T.cont/T.tels*1000)/10:0,
+    'Contactados':T.cont,'Sin llamada':T.c_si,'1-3 intentos':T.c_1a3,'4-6 intentos':T.c_4a6,'+6 intentos':T.c_mas6,'Potencial call':T.pot,'Sin contacto':T.sc});
+  downloadXL(rows,'Tramos','potencial_call_tramos.xlsx');
+}
+
+function exportRangos(){
+  const grain=filteredGrain();
+  const byRango=aggregateBy(grain,'rango').sort((a,b)=>RANGOS.indexOf(a.rango)-RANGOS.indexOf(b.rango));
+  const rows=byRango.map(d=>({
+    'Rango deuda':d.rango,
+    'Casos':d.casos,
+    'Teléfonos':d.tels,
+    '% Contacto':d.pct,
+    'Contactados':d.cont,
+    'Sin llamada':d.c_si,
+    '1-3 intentos':d.c_1a3,
+    '4-6 intentos':d.c_4a6,
+    '+6 intentos':d.c_mas6,
+    'Potencial call':d.pot,
+    'Sin contacto':d.sc,
+  }));
+  const T=sum(byRango);
+  rows.push({'Rango deuda':'TOTAL','Casos':T.casos,'Teléfonos':T.tels,'% Contacto':T.tels?Math.round(T.cont/T.tels*1000)/10:0,
+    'Contactados':T.cont,'Sin llamada':T.c_si,'1-3 intentos':T.c_1a3,'4-6 intentos':T.c_4a6,'+6 intentos':T.c_mas6,'Potencial call':T.pot,'Sin contacto':T.sc});
+  downloadXL(rows,'Rangos','potencial_call_rangos.xlsx');
+}
+
+function exportEntDetalle(en){
+  const grain=filteredGrain().filter(r=>r.entidad===en);
+  const byRango=aggregateBy(grain,'rango').sort((a,b)=>RANGOS.indexOf(a.rango)-RANGOS.indexOf(b.rango));
+  const byTramo=aggregateBy(grain,'tramo').sort((a,b)=>TRAMOS.indexOf(a.tramo)-TRAMOS.indexOf(b.tramo));
+  const toRows=(arr,key)=>arr.map(d=>({
+    [key]:d[key]||d.rango||d.tramo,
+    'Teléfonos':d.tels,'% Contacto':d.pct,'Contactados':d.cont,
+    'Sin llamada':d.c_si,'1-3 intentos':d.c_1a3,'4-6 intentos':d.c_4a6,'+6 intentos':d.c_mas6,
+    'Potencial call':d.pot,'Sin contacto':d.sc,
+  }));
+  const wb=XLSX.utils.book_new();
+  const wsR=XLSX.utils.json_to_sheet(toRows(byRango,'Rango deuda'));
+  const wsT=XLSX.utils.json_to_sheet(toRows(byTramo,'Tramo'));
+  XLSX.utils.book_append_sheet(wb,wsR,'Por rango');
+  XLSX.utils.book_append_sheet(wb,wsT,'Por tramo');
+  XLSX.writeFile(wb, `potencial_call_${en}.xlsx`);
+}
+
+function exportTodo(){
+  const grain=filteredGrain();
+  const byEnt=aggregateBy(grain,'entidad').sort((a,b)=>a.entidad.localeCompare(b.entidad));
+  const byTramo=aggregateBy(grain,'tramo').sort((a,b)=>TRAMOS.indexOf(a.tramo)-TRAMOS.indexOf(b.tramo));
+  const byRango=aggregateBy(grain,'rango').sort((a,b)=>RANGOS.indexOf(a.rango)-RANGOS.indexOf(b.rango));
+
+  const toRows=(arr,key)=>arr.map(d=>({
+    [key]:d[key],'Casos':d.casos,'Teléfonos':d.tels,'% Contacto':d.pct,'Contactados':d.cont,
+    'Sin llamada':d.c_si,'1-3 intentos':d.c_1a3,'4-6 intentos':d.c_4a6,'+6 intentos':d.c_mas6,
+    'Potencial call':d.pot,'Sin contacto':d.sc,
+  }));
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(toRows(byEnt,'Entidad')),'Entidades');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(toRows(byTramo,'Tramo')),'Tramos');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(toRows(byRango,'Rango deuda')),'Rangos');
+  XLSX.writeFile(wb,'potencial_call_completo.xlsx');
+}
+
+
+function buildSB(){
+  const sb=document.getElementById('sbItems');sb.innerHTML='';
+  const totPot=Object.values(D).reduce((s,d)=>s+d.pot,0);
+  const allEl=document.createElement('div');
+  allEl.className='sb-item'+(cur==='ALL'?' active':'');
+  allEl.innerHTML=`<span class="sb-name">Todas</span><span class="sb-val">${fmt(totPot)}</span>`;
+  allEl.onclick=()=>sel('ALL');sb.appendChild(allEl);
+  [...ENTS].sort((a,b)=>a.localeCompare(b)).forEach(e=>{
+    const col=pcC(D[e].pct);
+    const el=document.createElement('div');
+    el.className='sb-item'+(cur===e?' active':'');el.id='sb-'+e;
+    el.innerHTML=`<span class="sb-name"><span class="sb-dot" style="background:${col}"></span>${e}</span><span class="sb-val">${fmt(D[e].pot)}</span>`;
+    el.onclick=()=>sel(e);sb.appendChild(el);
+  });
+}
+
+function sel(e){
+  cur=e;
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
+  (document.getElementById(e==='ALL'?null:'sb-'+e)||document.querySelector('.sb-item')).classList.add('active');
+  if(e==='ALL') document.querySelector('.sb-item').classList.add('active');
+  charts.forEach(c=>{try{c.destroy()}catch(x){}});charts=[];
+  updKPIs(e); e==='ALL'?renderAll():renderEnt(e);
+}
+
+function updKPIs(e){
+  if(e==='ALL'){
+    // Para ALL: usa filteredGrain() — misma fuente que las tablas
+    const grain=filteredGrain();
+    const totC=grain.reduce((s,d)=>s+d.casos,0);
+    const totT=grain.reduce((s,d)=>s+d.tels,0);
+    const totCo=grain.reduce((s,d)=>s+d.cont,0);
+    const totP=grain.reduce((s,d)=>s+d.pot,0);
+    const pct=totT?Math.round(totCo/totT*1000)/10:0;
+    document.getElementById('mTitle').textContent='Todas las entidades';
+    document.getElementById('mBadge').textContent=pct+'% CONTACTO GLOBAL';
+    document.getElementById('mBadge').style.cssText='background:rgba(196,40,64,.12);color:#c42840;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.06em';
+    document.getElementById('mSub').textContent='Datos del archivo · Seleccioná una entidad para el detalle';
+    document.getElementById('kv-c').textContent=fmt(totC);
+    document.getElementById('kv-t').textContent=fmt(totT);
+    document.getElementById('kv-co').textContent=fmt(totCo);
+    document.getElementById('kv-ps').textContent=pct+'% del total';
+    document.getElementById('kv-p').textContent=fmt(totP);
+  } else {
+    // Para entidad: calcula desde GRAIN filtrado — misma fuente que las tablas
+    const grain=filteredGrain().filter(r=>r.entidad===e);
+    const d=sum(grain);
+    d.pct=d.tels?Math.round(d.cont/d.tels*1000)/10:0;
+    d.tel_caso=D[e]?.tel_caso||0;
+    const col=d.pct>=40?'#1a9e6a':d.pct>=20?'#d97706':'#dc2626';
+    const bg=d.pct>=40?'rgba(26,158,106,.12)':d.pct>=20?'rgba(217,119,6,.12)':'rgba(220,38,38,.12)';
+    document.getElementById('mTitle').textContent=e;
+    document.getElementById('mBadge').textContent=d.pct+'% CONTACTO';
+    document.getElementById('mBadge').style.cssText=`background:${bg};color:${col};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.06em`;
+    document.getElementById('mSub').textContent=`${fmt(d.tels)} teléfonos · ${fmt(d.casos)} casos · ${d.tel_caso} tel/caso`;
+    document.getElementById('kv-c').textContent=fmt(d.casos);
+    document.getElementById('kv-t').textContent=fmt(d.tels);
+    document.getElementById('kv-co').textContent=fmt(d.cont);
+    document.getElementById('kv-ps').textContent=d.pct+'% del total';
+    document.getElementById('kv-p').textContent=fmt(d.pot);
+  }
+}
+
+function pct2(v,tot){
+  if(!tot||!v) return '';
+  const p=Math.round(v/tot*100);
+  return `<div style="font-size:9px;color:var(--muted);margin-top:1px">${p}% del total</div>`;
+}
+function tableRow(label,sub,d,onclick,isAct,totals){
+  const w1=d.pot?Math.round(d.c_si/d.pot*100):0,w2=d.pot?Math.round(d.c_1a3/d.pot*100):0,w3=100-w1-w2;
+  const pct=d.pct||0;
+  const T=totals||{};
+  return `<tr ${onclick?`onclick="${onclick}"`:''}class="${isAct?'act':''}">
+    <td class="tl"><div class="en">${label}</div>${sub?`<div class="es">${sub}</div>`:''}</td>
+    <td>${fmt(d.casos)}</td><td>${fmt(d.tels)}</td>
+    <td><div class="bc"><div class="bb"><div class="bf" style="width:${pct}%;background:${pcC(pct)}"></div></div><span class="pt" style="color:${pcC(pct)};background:${pcBg(pct)}">${pct}%</span></div></td>
+    <td style="color:var(--green);font-weight:500">${fmt(d.cont)}${pct2(d.cont,T.cont)}</td>
+    <td class="bds" style="color:var(--green)">${fmt(d.c_si)}${pct2(d.c_si,T.c_si)}</td>
+    <td style="color:var(--burdo-light)">${fmt(d.c_1a3)}${pct2(d.c_1a3,T.c_1a3)}</td>
+    <td style="color:var(--amber)">${d.c_4a6?fmt(d.c_4a6):'—'}${pct2(d.c_4a6,T.c_4a6)}</td>
+    <td style="color:var(--muted)">${d.c_mas6?fmt(d.c_mas6):'—'}${pct2(d.c_mas6,T.c_mas6)}</td>
+    <td class="bds" style="font-weight:600;color:var(--burdo-light)">${fmt(d.pot)}${pct2(d.pot,T.pot)}</td>
+    <td style="color:var(--red)">${fmt(d.sc)}${pct2(d.sc,T.sc)}</td>
+    <td><div class="seg"><div style="width:${w1}%;background:var(--green)"></div><div style="width:${w2}%;background:var(--burdo-light)"></div><div style="width:${w3}%;background:var(--amber)"></div></div><div style="font-size:9px;color:var(--muted);margin-top:2px">${w1}%·${w2}%·${w3}%</div></td>
+  </tr>`;
+}
+function tableHead(){
+  return`<thead><tr>
+    <th class="tl">Entidad / Tramo</th><th>Casos</th><th>Teléfonos</th>
+    <th>% Contacto</th><th>Contactados</th>
+    <th class="bds" style="color:var(--green)">Sin llamada</th>
+    <th style="color:var(--burdo-light)">1-3 int.</th>
+    <th style="color:var(--amber)">4-6 int.</th>
+    <th style="color:var(--muted)">+6 int.</th>
+    <th class="bds" style="color:var(--burdo-light)">Potencial</th>
+    <th style="color:var(--red)">Sin contacto</th>
+    <th class="tl">Comp.</th>
+  </tr></thead>`;
+}
+function totRow(d){
+  const w1=d.pot?Math.round(d.c_si/d.pot*100):0,w2=d.pot?Math.round(d.c_1a3/d.pot*100):0,w3=100-w1-w2;
+  const pct=d.pct||0;
+  return`<tr class="tot"><td class="tl"><div class="en">TOTAL</div></td>
+    <td>${fmt(d.casos)}</td><td>${fmt(d.tels)}</td>
+    <td><div class="bc"><div class="bb"><div class="bf" style="width:${pct}%;background:${pcC(pct)}"></div></div><span class="pt" style="color:${pcC(pct)};background:${pcBg(pct)}">${pct}%</span></div></td>
+    <td style="color:var(--green);font-weight:500">${fmt(d.cont)}</td>
+    <td class="bds" style="color:var(--green)">${fmt(d.c_si)}</td>
+    <td style="color:var(--burdo-light)">${fmt(d.c_1a3)}</td>
+    <td style="color:var(--amber)">${fmt(d.c_4a6)}</td>
+    <td style="color:var(--muted)">${fmt(d.c_mas6)}</td>
+    <td class="bds" style="font-weight:700;color:var(--burdo-light)">${fmt(d.pot)}</td>
+    <td style="color:var(--red)">${fmt(d.sc)}</td>
+    <td><div class="seg"><div style="width:${w1}%;background:var(--green)"></div><div style="width:${w2}%;background:var(--burdo-light)"></div><div style="width:${w3}%;background:var(--amber)"></div></div></td>
+  </tr>`;
+}
+function sum(arr){
+  return arr.reduce((a,d)=>({casos:a.casos+d.casos,tels:a.tels+d.tels,cont:a.cont+d.cont,sc:a.sc+d.sc,c_si:a.c_si+d.c_si,c_1a3:a.c_1a3+d.c_1a3,c_4a6:a.c_4a6+d.c_4a6,c_mas6:a.c_mas6+d.c_mas6,pot:a.pot+d.pot}),{casos:0,tels:0,cont:0,sc:0,c_si:0,c_1a3:0,c_4a6:0,c_mas6:0,pot:0});
+}
+
+
+// ── HELPERS ──────────────────────────────────────────
+function filteredGrain(){
+  return GRAIN.filter(r=>
+    activeEnts.has(r.entidad) &&
+    activeRangos.has(r.rango) &&
+    activeTramos.has(r.tramo)
+  );
+}
+
+function aggregateBy(grain, key){
+  const map={};
+  grain.forEach(r=>{
+    const k=r[key];
+    if(!map[k]) map[k]={[key]:k,casos:0,tels:0,cont:0,sc:0,c_si:0,c_1a3:0,c_4a6:0,c_mas6:0,pot:0};
+    const m=map[k];
+    ['casos','tels','cont','sc','c_si','c_1a3','c_4a6','c_mas6','pot'].forEach(f=>m[f]+=r[f]||0);
+  });
+  return Object.values(map).map(d=>({...d,pct:d.tels?Math.round(d.cont/d.tels*1000)/10:0}));
+}
+
+function updateTopKPIs(grain){
+  const T={casos:0,tels:0,cont:0,pot:0};
+  grain.forEach(d=>{T.casos+=d.casos;T.tels+=d.tels;T.cont+=d.cont;T.pot+=d.pot;});
+  const pct=T.tels?Math.round(T.cont/T.tels*1000)/10:0;
+  document.getElementById('mBadge').textContent=pct+'% CONTACTO GLOBAL';
+  document.getElementById('mBadge').style.cssText='background:rgba(196,40,64,.12);color:#c42840;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.06em';
+  document.getElementById('kv-c').textContent=fmt(T.casos);
+  document.getElementById('kv-t').textContent=fmt(T.tels);
+  document.getElementById('kv-co').textContent=fmt(T.cont);
+  document.getElementById('kv-ps').textContent=pct+'% del total';
+  document.getElementById('kv-p').textContent=fmt(T.pot);
+}
+
+// ── FILTER TOGGLES ───────────────────────────────────
+function toggleEnt(e){
+  if(activeEnts.has(e)&&activeEnts.size>1) activeEnts.delete(e);
+  else activeEnts.add(e);
+  document.querySelectorAll('.ent-chip').forEach(el=>{
+    const en=el.dataset.e;
+    el.style.background=activeEnts.has(en)?'rgba(196,40,64,.1)':'none';
+    el.style.color=activeEnts.has(en)?'var(--burdo-light)':'var(--muted)';
+    el.style.borderColor=activeEnts.has(en)?'var(--burdo-light)':'var(--bd)';
+  });
+  _renderAllContent();
+}
+function selectAllEnts(){
+  activeEnts=new Set(ENTS);
+  document.querySelectorAll('.ent-chip').forEach(el=>{
+    el.style.background='rgba(196,40,64,.1)';el.style.color='var(--burdo-light)';el.style.borderColor='var(--burdo-light)';
+  });
+  _renderAllContent();
+}
+function toggleRango(r){
+  if(activeRangos.has(r)&&activeRangos.size>1) activeRangos.delete(r);
+  else activeRangos.add(r);
+  document.querySelectorAll('.rango-chip').forEach(el=>{
+    const rv=el.dataset.r;
+    el.style.background=activeRangos.has(rv)?'rgba(196,40,64,.1)':'none';
+    el.style.color=activeRangos.has(rv)?'var(--burdo-light)':'var(--muted)';
+    el.style.borderColor=activeRangos.has(rv)?'var(--burdo-light)':'var(--bd)';
+  });
+  _renderAllContent();
+}
+function selectAllRangos(){
+  activeRangos=new Set(RANGOS);
+  document.querySelectorAll('.rango-chip').forEach(el=>{
+    el.style.background='rgba(196,40,64,.1)';el.style.color='var(--burdo-light)';el.style.borderColor='var(--burdo-light)';
+  });
+  _renderAllContent();
+}
+function toggleTramo(t){
+  if(activeTramos.has(t)&&activeTramos.size>1) activeTramos.delete(t);
+  else activeTramos.add(t);
+  document.querySelectorAll('.tramo-chip2').forEach(el=>{
+    const tv=el.dataset.t;
+    el.style.background=activeTramos.has(tv)?'rgba(196,40,64,.1)':'none';
+    el.style.color=activeTramos.has(tv)?'var(--burdo-light)':'var(--muted)';
+    el.style.borderColor=activeTramos.has(tv)?'var(--burdo-light)':'var(--bd)';
+  });
+  _renderAllContent();
+}
+function selectAllTramos(){
+  activeTramos=new Set(TRAMOS);
+  document.querySelectorAll('.tramo-chip2').forEach(el=>{
+    el.style.background='rgba(196,40,64,.1)';el.style.color='var(--burdo-light)';el.style.borderColor='var(--burdo-light)';
+  });
+  _renderAllContent();
+}
+
+function chipBtn(label, onclick, isActive, extraClass=''){
+  return `<button class="${extraClass}" data-e="${label}" data-r="${label}" data-t="${label}" onclick="${onclick}"
+    style="padding:3px 9px;border-radius:20px;border:1px solid ${isActive?'var(--burdo-light)':'var(--bd)'};font-size:10px;cursor:pointer;font-family:var(--f);transition:all .12s;background:${isActive?'rgba(196,40,64,.1)':'none'};color:${isActive?'var(--burdo-light)':'var(--muted)'}">${label}</button>`;
+}
+
+// ── RENDER ALL ───────────────────────────────────────
+function renderAll(){
+  const sortedE=[...ENTS].sort((a,b)=>D[b].pot-D[a].pot);
+
+  let entChips=`<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:10px;color:var(--burdo);font-weight:600;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">Entidad</span>
+    <button onclick="selectAllEnts()" style="padding:3px 8px;border-radius:20px;border:1px solid var(--bd);background:var(--s3);color:var(--muted);font-size:10px;cursor:pointer;font-family:var(--f)">Todas</button>`;
+  sortedE.forEach(e=>{
+    entChips+=chipBtn(e,`toggleEnt('${e}')`,activeEnts.has(e),'ent-chip');
+  });
+  entChips+=`</div>`;
+
+  let rangoChips=`<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px">
+    <span style="font-size:10px;color:var(--burdo);font-weight:600;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">Rango</span>
+    <button onclick="selectAllRangos()" style="padding:3px 8px;border-radius:20px;border:1px solid var(--bd);background:var(--s3);color:var(--muted);font-size:10px;cursor:pointer;font-family:var(--f)">Todos</button>`;
+  RANGOS.forEach(r=>{
+    rangoChips+=chipBtn(r,`toggleRango('${r}')`,activeRangos.has(r),'rango-chip');
+  });
+  rangoChips+=`</div>`;
+
+  let tramoChips=`<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:6px">
+    <span style="font-size:10px;color:var(--burdo);font-weight:600;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">Tramo</span>
+    <button onclick="selectAllTramos()" style="padding:3px 8px;border-radius:20px;border:1px solid var(--bd);background:var(--s3);color:var(--muted);font-size:10px;cursor:pointer;font-family:var(--f)">Todos</button>`;
+  TRAMOS.forEach(t=>{
+    tramoChips+=chipBtn(t,`toggleTramo('${t}')`,activeTramos.has(t),'tramo-chip2');
+  });
+  tramoChips+=`</div>`;
+
+  const filters=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:14px">
+    ${entChips}${rangoChips}${tramoChips}
+  </div>`;
+
+  document.getElementById('cnt').innerHTML=filters+`<div id="allContent"></div>`;
+  _renderAllContent();
+}
+
+function _renderAllContent(){
+  charts.forEach(c=>{try{c.destroy()}catch(x){}});charts=[];
+  const grain=filteredGrain();
+  updateTopKPIs(grain);
+
+  // Aggregate by entidad
+  const byEnt=aggregateBy(grain,'entidad').sort((a,b)=>a.entidad.localeCompare(b.entidad));
+  // Aggregate by tramo
+  const byTramo=aggregateBy(grain,'tramo').sort((a,b)=>TRAMOS.indexOf(a.tramo)-TRAMOS.indexOf(b.tramo));
+  // Aggregate by rango
+  const byRango=aggregateBy(grain,'rango').sort((a,b)=>RANGOS.indexOf(a.rango)-RANGOS.indexOf(b.rango));
+
+  const totAll=sum(byEnt);totAll.pct=totAll.tels?Math.round(totAll.cont/totAll.tels*1000)/10:0;
+  const totTramo=sum(byTramo);totTramo.pct=totTramo.tels?Math.round(totTramo.cont/totTramo.tels*1000)/10:0;
+  const totRango=sum(byRango);totRango.pct=totRango.tels?Math.round(totRango.cont/totRango.tels*1000)/10:0;
+
+  const nEnts=byEnt.length, nR=activeRangos.size, nT=activeTramos.size;
+  const filterLabel=(nEnts<ENTS.length||nR<RANGOS.length||nT<TRAMOS.length)?
+    ` <span style="font-size:9px;color:var(--amber);font-weight:500">(filtrado: ${nEnts} ent · ${nR} rangos · ${nT} tramos)</span>`:'';
+
+  let entRows='';
+  byEnt.forEach(d=>{
+    entRows+=tableRow(d.entidad,`${fmt(d.tels)} tel · ${fmt(d.casos)} casos`,d,`sel('${d.entidad}')`,cur===d.entidad,totAll);
+  });
+
+  let tramoRows='';
+  byTramo.forEach(d=>{ tramoRows+=tableRow(d.tramo,`${fmt(d.tels)} tel · ${fmt(d.casos)} casos`,d,'','',totTramo); });
+
+  let rangoRows='';
+  byRango.forEach(d=>{
+    const w1=d.pot?Math.round(d.c_si/d.pot*100):0,w2=d.pot?Math.round(d.c_1a3/d.pot*100):0,w3=100-w1-w2;
+    rangoRows+=`<tr>
+      <td class="tl" style="font-weight:600">${d.rango}</td>
+      <td>${fmt(d.casos)}</td><td>${fmt(d.tels)}</td>
+      <td><div class="bc"><div class="bb"><div class="bf" style="width:${d.pct}%;background:${pcC(d.pct)}"></div></div><span class="pt" style="color:${pcC(d.pct)};background:${pcBg(d.pct)}">${d.pct}%</span></div></td>
+      <td style="color:var(--green);font-weight:500">${fmt(d.cont)}${pct2(d.cont,totRango.cont)}</td>
+      <td class="bds" style="color:var(--green)">${fmt(d.c_si)}${pct2(d.c_si,totRango.c_si)}</td>
+      <td style="color:var(--burdo-light)">${fmt(d.c_1a3)}${pct2(d.c_1a3,totRango.c_1a3)}</td>
+      <td style="color:var(--amber)">${d.c_4a6?fmt(d.c_4a6):'—'}${pct2(d.c_4a6,totRango.c_4a6)}</td>
+      <td style="color:var(--muted)">${d.c_mas6?fmt(d.c_mas6):'—'}${pct2(d.c_mas6,totRango.c_mas6)}</td>
+      <td class="bds" style="font-weight:600;color:var(--burdo-light)">${fmt(d.pot)}${pct2(d.pot,totRango.pot)}</td>
+      <td style="color:var(--red)">${fmt(d.sc)}${pct2(d.sc,totRango.sc)}</td>
+      <td><div class="seg"><div style="width:${w1}%;background:var(--green)"></div><div style="width:${w2}%;background:var(--burdo-light)"></div><div style="width:${w3}%;background:var(--amber)"></div></div><div style="font-size:9px;color:var(--muted);margin-top:2px">${w1}%·${w2}%·${w3}%</div></td>
+    </tr>`;
+  });
+  const wR1=totRango.pot?Math.round(totRango.c_si/totRango.pot*100):0,wR2=totRango.pot?Math.round(totRango.c_1a3/totRango.pot*100):0,wR3=100-wR1-wR2;
+  rangoRows+=`<tr class="tot"><td class="tl">TOTAL</td><td>${fmt(totRango.casos)}</td><td>${fmt(totRango.tels)}</td>
+    <td><div class="bc"><div class="bb"><div class="bf" style="width:${totRango.pct}%;background:${pcC(totRango.pct)}"></div></div><span class="pt" style="color:${pcC(totRango.pct)};background:${pcBg(totRango.pct)}">${totRango.pct}%</span></div></td>
+    <td style="color:var(--green);font-weight:500">${fmt(totRango.cont)}</td>
+    <td class="bds" style="color:var(--green)">${fmt(totRango.c_si)}</td>
+    <td style="color:var(--burdo-light)">${fmt(totRango.c_1a3)}</td>
+    <td style="color:var(--amber)">${fmt(totRango.c_4a6)}</td>
+    <td style="color:var(--muted)">${fmt(totRango.c_mas6)}</td>
+    <td class="bds" style="font-weight:700;color:var(--burdo-light)">${fmt(totRango.pot)}</td>
+    <td style="color:var(--red)">${fmt(totRango.sc)}</td>
+    <td><div class="seg"><div style="width:${wR1}%;background:var(--green)"></div><div style="width:${wR2}%;background:var(--burdo-light)"></div><div style="width:${wR3}%;background:var(--amber)"></div></div></td>
+  </tr>`;
+
+  const legend=`<div class="legend"><span><span class="ldot" style="background:var(--green)"></span>Sin llamada</span><span><span class="ldot" style="background:var(--burdo-light)"></span>1-3 intentos</span><span><span class="ldot" style="background:var(--amber)"></span>4-6 intentos</span><span style="margin-left:6px;color:var(--bd)">|</span><span>Click en entidad para ver detalle</span></div>`;
+
+  const rangoHead=`<thead><tr>
+    <th class="tl">Rango deuda</th><th>Casos</th><th>Teléfonos</th><th>% Contacto</th><th>Contactados</th>
+    <th class="bds" style="color:var(--green)">Sin llamada</th>
+    <th style="color:var(--burdo-light)">1-3 int.</th>
+    <th style="color:var(--amber)">4-6 int.</th>
+    <th style="color:var(--muted)">+6 int.</th>
+    <th class="bds" style="color:var(--burdo-light)">Potencial</th>
+    <th style="color:var(--red)">Sin contacto</th>
+    <th class="tl">Comp.</th>
+  </tr></thead>`;
+
+  document.getElementById('allContent').innerHTML=`
+    <div class="tbl-header"><div class="sec-label" style="flex:1;margin-right:10px">Por entidad${filterLabel}</div><button class="xl-btn" onclick="exportEntidades()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button></div>
+    <div class="tbl-wrap"><table class="res">${tableHead()}<tbody>${entRows}${totRow(totAll)}</tbody></table></div>
+    ${legend}
+    <div style="margin-top:18px"></div>
+    <div class="tbl-header"><div class="sec-label" style="flex:1;margin-right:10px">Por tramo de gestión${filterLabel}</div><button class="xl-btn" onclick="exportTramos()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button></div>
+    <div class="tbl-wrap"><table class="res">${tableHead()}<tbody>${tramoRows}${totRow(totTramo)}</tbody></table></div>
+    <div style="margin-top:18px"></div>
+    <div class="tbl-header"><div class="sec-label" style="flex:1;margin-right:10px">Por rango de deuda${filterLabel}</div><button class="xl-btn" onclick="exportRangos()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button></div>
+    <div class="tbl-wrap"><table class="res">${rangoHead}<tbody>${rangoRows}</tbody></table></div>
+    <div style="margin-bottom:16px"></div>
+    <div class="ch-row">
+      <div class="chb"><div class="cht">Potencial por tramo</div><canvas id="cT1" height="180"></canvas></div>
+      <div class="chb"><div class="cht">Potencial por rango de deuda</div><canvas id="cT2" height="180"></canvas></div>
+    </div>`;
+
+  setTimeout(()=>{
+    const tLabels=byTramo.map(d=>d.tramo);
+    const rLabels=byRango.map(d=>d.rango);
+    charts.push(new Chart(document.getElementById('cT1'),{type:'bar',data:{labels:tLabels,datasets:[
+      {label:'Sin llamada',data:byTramo.map(d=>d.c_si),backgroundColor:'#1a9e6a',stack:'s'},
+      {label:'1-3 int.',data:byTramo.map(d=>d.c_1a3),backgroundColor:'#c42840',stack:'s'},
+      {label:'4-6 int.',data:byTramo.map(d=>d.c_4a6),backgroundColor:'#d97706',stack:'s'},
+    ]},options:{responsive:true,plugins:{legend:{labels:{color:tC,font:{size:10}},position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`}}},
+      scales:{x:{stacked:true,ticks:{color:tC,font:{size:10}},grid:{display:false}},y:{stacked:true,ticks:{color:tC,callback:v=>fmts(v)},grid:{color:gC}}}}}));
+    charts.push(new Chart(document.getElementById('cT2'),{type:'bar',data:{labels:rLabels,datasets:[
+      {label:'Sin llamada',data:byRango.map(d=>d.c_si),backgroundColor:'#1a9e6a',stack:'s'},
+      {label:'1-3 int.',data:byRango.map(d=>d.c_1a3),backgroundColor:'#c42840',stack:'s'},
+      {label:'4-6 int.',data:byRango.map(d=>d.c_4a6),backgroundColor:'#d97706',stack:'s'},
+    ]},options:{responsive:true,plugins:{legend:{labels:{color:tC,font:{size:10}},position:'bottom'},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fmt(c.raw)}`}}},
+      scales:{x:{stacked:true,ticks:{color:tC,font:{size:9},autoSkip:false,maxRotation:35},grid:{display:false}},y:{stacked:true,ticks:{color:tC,callback:v=>fmts(v)},grid:{color:gC}}}}}));
+  },50);
+}
+
+
+function renderEntFiltered(en){
+  // Build entity-level filter chips
+  const rangoChipsEnt=RANGOS.map(r=>`<button class="ent-rango-chip" data-r="${r}" onclick="toggleEntRango('${r}','${en}')"
+    style="padding:3px 8px;border-radius:20px;border:1px solid ${entActiveRangos.has(r)?'var(--burdo-light)':'var(--bd)'};font-size:10px;cursor:pointer;font-family:var(--f);transition:all .12s;background:${entActiveRangos.has(r)?'rgba(196,40,64,.1)':'none'};color:${entActiveRangos.has(r)?'var(--burdo-light)':'var(--muted)'}">${r}</button>`).join('');
+  const tramoChipsEnt=TRAMOS.map(t=>`<button class="ent-tramo-chip" data-t="${t}" onclick="toggleEntTramo('${t}','${en}')"
+    style="padding:3px 8px;border-radius:20px;border:1px solid ${entActiveTramos.has(t)?'var(--burdo-light)':'var(--bd)'};font-size:10px;cursor:pointer;font-family:var(--f);transition:all .12s;background:${entActiveTramos.has(t)?'rgba(196,40,64,.1)':'none'};color:${entActiveTramos.has(t)?'var(--burdo-light)':'var(--muted)'}">${t}</button>`).join('');
+
+  const filterBar=`<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:flex;flex-direction:column;gap:6px">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;color:var(--burdo);font-weight:600;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;min-width:52px">Rango</span>
+      <button onclick="selectAllEntRangos('${en}')" style="padding:3px 8px;border-radius:20px;border:1px solid var(--bd);background:var(--s3);color:var(--muted);font-size:10px;cursor:pointer;font-family:var(--f)">Todos</button>
+      ${rangoChipsEnt}
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;color:var(--burdo);font-weight:600;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;min-width:52px">Tramo</span>
+      <button onclick="selectAllEntTramos('${en}')" style="padding:3px 8px;border-radius:20px;border:1px solid var(--bd);background:var(--s3);color:var(--muted);font-size:10px;cursor:pointer;font-family:var(--f)">Todos</button>
+      ${tramoChipsEnt}
+    </div>
+  </div>`;
+
+  // Filter grain by entity + per-entity filters
+  const grain=GRAIN.filter(r=>r.entidad===en && entActiveRangos.has(r.rango) && entActiveTramos.has(r.tramo));
+
+  const d=sum(grain);
+  d.pct=d.tels?Math.round(d.cont/d.tels*1000)/10:0;
+  d.tel_caso=D[en]?.tel_caso||0;
+
+  const etRows=aggregateBy(grain,'tramo').sort((a,b)=>TRAMOS.indexOf(a.tramo)-TRAMOS.indexOf(b.tramo));
+  const rRows=aggregateBy(grain,'rango').sort((a,b)=>RANGOS.indexOf(a.rango)-RANGOS.indexOf(b.rango));
+  const etLabels=etRows.map(r=>r.tramo);
+  const rLabels=rRows.map(r=>r.rango);
+  const totET=sum(etRows);totET.pct=totET.tels?Math.round(totET.cont/totET.tels*1000)/10:0;
+  const totR=sum(rRows);totR.pct=totR.tels?Math.round(totR.cont/totR.tels*1000)/10:0;
+
+  // Update header KPIs
+  const col=d.pct>=40?'#1a9e6a':d.pct>=20?'#d97706':'#dc2626';
+  const bg=d.pct>=40?'rgba(26,158,106,.12)':d.pct>=20?'rgba(217,119,6,.12)':'rgba(220,38,38,.12)';
+  document.getElementById('mBadge').textContent=d.pct+'% CONTACTO';
+  document.getElementById('mBadge').style.cssText=`background:${bg};color:${col};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.06em`;
+  document.getElementById('kv-c').textContent=fmt(d.casos);
+  document.getElementById('kv-t').textContent=fmt(d.tels);
+  document.getElementById('kv-co').textContent=fmt(d.cont);
+  document.getElementById('kv-ps').textContent=d.pct+'% del total';
+  document.getElementById('kv-p').textContent=fmt(d.pot);
+
+  const nR=entActiveRangos.size, nT=entActiveTramos.size;
+  const filterLabel=(nR<RANGOS.length||nT<TRAMOS.length)?
+    ` <span style="font-size:9px;color:var(--amber);font-weight:500">(${nR} rangos · ${nT} tramos)</span>`:'';
+
+  let tramoRows='';
+  etRows.forEach(r=>{ tramoRows+=tableRow(r.tramo,`${fmt(r.tels)} tel`,r,'','',totET); });
+
+  let rangoRows='';
+  rRows.forEach(r=>{
+    const w1=r.pot?Math.round(r.c_si/r.pot*100):0,w2=r.pot?Math.round(r.c_1a3/r.pot*100):0,w3=100-w1-w2;
+    rangoRows+=`<tr><td class="tl" style="font-weight:600">${r.rango}</td>
+      <td>—</td><td>${fmt(r.tels)}</td>
+      <td><div class="bc"><div class="bb"><div class="bf" style="width:${r.pct}%;background:${pcC(r.pct)}"></div></div><span style="color:${pcC(r.pct)};font-weight:600;min-width:34px;text-align:right;font-size:11px">${r.pct}%</span></div></td>
+      <td style="color:var(--green);font-weight:500">${fmt(r.cont)}${pct2(r.cont,totR.cont)}</td>
+      <td class="bds" style="color:var(--green)">${fmt(r.c_si)}${pct2(r.c_si,totR.c_si)}</td>
+      <td style="color:var(--burdo-light)">${fmt(r.c_1a3)}${pct2(r.c_1a3,totR.c_1a3)}</td>
+      <td style="color:var(--amber)">${r.c_4a6?fmt(r.c_4a6):'—'}${pct2(r.c_4a6,totR.c_4a6)}</td>
+      <td style="color:var(--muted)">${r.c_mas6?fmt(r.c_mas6):'—'}${pct2(r.c_mas6,totR.c_mas6)}</td>
+      <td class="bds" style="font-weight:600;color:var(--burdo-light)">${fmt(r.pot)}${pct2(r.pot,totR.pot)}</td>
+      <td style="color:var(--red)">${fmt(r.sc)}${pct2(r.sc,totR.sc)}</td>
+      <td><div class="seg"><div style="width:${w1}%;background:var(--green)"></div><div style="width:${w2}%;background:var(--burdo-light)"></div><div style="width:${w3}%;background:var(--amber)"></div></div></td>
+    </tr>`;
+  });
+
+  document.getElementById('entDetail').innerHTML=`
+    ${filterBar}
+    <div class="sec-label">Apertura por intentos${filterLabel}</div>
+    <div class="det-kpis" style="grid-template-columns:repeat(5,1fr)">
+      <div class="dk" style="background:rgba(26,158,106,.06);border-color:rgba(26,158,106,.25)"><div class="dkl">Sin llamada operador</div><div class="dkv" style="color:var(--green)">${fmt(d.c_si)}</div><div class="dks">${d.cont?Math.round(d.c_si/d.cont*100):0}% de contactados</div></div>
+      <div class="dk" style="background:rgba(196,40,64,.06);border-color:rgba(196,40,64,.25)"><div class="dkl">1-3 intentos</div><div class="dkv" style="color:var(--burdo-light)">${fmt(d.c_1a3)}</div><div class="dks">${d.cont?Math.round(d.c_1a3/d.cont*100):0}% de contactados</div></div>
+      <div class="dk" style="background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.25)"><div class="dkl">4-6 intentos</div><div class="dkv" style="color:var(--amber)">${fmt(d.c_4a6)}</div><div class="dks">${d.cont?Math.round(d.c_4a6/d.cont*100):0}% de contactados</div></div>
+      <div class="dk" style="background:rgba(107,114,128,.06);border-color:rgba(107,114,128,.25)"><div class="dkl">+6 intentos</div><div class="dkv" style="color:var(--muted)">${fmt(d.c_mas6)}</div><div class="dks">${d.cont?Math.round(d.c_mas6/d.cont*100):0}% de contactados</div></div>
+      <div class="dk" style="background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.25)"><div class="dkl">Sin contacto</div><div class="dkv" style="color:var(--red)">${fmt(d.sc)}</div><div class="dks">${d.tels?Math.round(d.sc/d.tels*100):0}% del total</div></div>
+    </div>
+    <div class="tbl-header"><div class="sec-label" style="flex:1;margin-right:10px">Por tramo de gestión${filterLabel}</div><button class="xl-btn" onclick="exportEntDetalle('${en}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel detalle</button></div>
+    <div class="tbl-wrap"><table class="res">${tableHead()}<tbody>${tramoRows}${totRow(totET)}</tbody></table></div>
+    <div class="sec-label" style="margin-top:16px">Por rango de deuda${filterLabel}</div>
+    <div class="tbl-wrap"><table class="res"><thead><tr>
+      <th class="tl">Rango</th><th>—</th><th>Teléfonos</th>
+      <th>% Contacto</th><th>Contactados</th>
+      <th class="bds" style="color:var(--green)">Sin llamada</th>
+      <th style="color:var(--burdo-light)">1-3 int.</th><th style="color:var(--amber)">4-6 int.</th>
+      <th style="color:var(--muted)">+6 int.</th>
+      <th class="bds" style="color:var(--burdo-light)">Potencial</th>
+      <th style="color:var(--red)">Sin contacto</th><th class="tl">Comp.</th>
+    </tr></thead><tbody>${rangoRows}${totRow(totR)}</tbody></table></div>
+    <div class="ch-row" style="margin-top:14px">
+      <div class="chb"><div class="cht">Potencial por tramo</div><canvas id="cE1" height="160"></canvas></div>
+      <div class="chb"><div class="cht">Potencial por rango de deuda</div><canvas id="cE2" height="160"></canvas></div>
+    </div>`;
+
+  charts.forEach(ch=>{try{ch.destroy()}catch(x){}});charts=[];
+  charts.push(new Chart(document.getElementById('cE1'),{type:'bar',data:{labels:etLabels,datasets:[
+    {label:'Sin llamada',data:etRows.map(r=>r.c_si),backgroundColor:'#1a9e6a',stack:'s'},
+    {label:'1-3 int.',data:etRows.map(r=>r.c_1a3),backgroundColor:'#c42840',stack:'s'},
+    {label:'4-6 int.',data:etRows.map(r=>r.c_4a6),backgroundColor:'#d97706',stack:'s'},
+  ]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ch=>`${ch.dataset.label}: ${fmt(ch.raw)}`}}},
+    scales:{x:{stacked:true,ticks:{color:tC,font:{size:9}},grid:{display:false}},y:{stacked:true,ticks:{color:tC,callback:v=>fmts(v)},grid:{color:gC}}}}}));
+  charts.push(new Chart(document.getElementById('cE2'),{type:'bar',data:{labels:rLabels,datasets:[
+    {label:'Sin llamada',data:rRows.map(r=>r.c_si),backgroundColor:'#1a9e6a',stack:'s'},
+    {label:'1-3 int.',data:rRows.map(r=>r.c_1a3),backgroundColor:'#c42840',stack:'s'},
+    {label:'4-6 int.',data:rRows.map(r=>r.c_4a6),backgroundColor:'#d97706',stack:'s'},
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:tC,font:{size:10}},position:'bottom'},tooltip:{callbacks:{label:ch=>`${ch.dataset.label}: ${fmt(ch.raw)}`}}},
+    scales:{x:{stacked:true,ticks:{color:tC,font:{size:9},autoSkip:false,maxRotation:35},grid:{display:false}},y:{stacked:true,ticks:{color:tC,callback:v=>fmts(v)},grid:{color:gC}}}}}));
+}
+
+function renderEnt(en){
+  // Reset per-entity filters when switching entity
+  entActiveRangos=new Set(RANGOS);
+  entActiveTramos=new Set(TRAMOS);
+  // Render shell with a container for dynamic content
+  document.getElementById('cnt').innerHTML=`<div id="entDetail"></div>`;
+  renderEntFiltered(en);
+}
+
+function toggleEntRango(r,en){
+  if(entActiveRangos.has(r)&&entActiveRangos.size>1) entActiveRangos.delete(r);
+  else entActiveRangos.add(r);
+  renderEntFiltered(en);
+}
+function selectAllEntRangos(en){
+  entActiveRangos=new Set(RANGOS);
+  renderEntFiltered(en);
+}
+function toggleEntTramo(t,en){
+  if(entActiveTramos.has(t)&&entActiveTramos.size>1) entActiveTramos.delete(t);
+  else entActiveTramos.add(t);
+  renderEntFiltered(en);
+}
+function selectAllEntTramos(en){
+  entActiveTramos=new Set(TRAMOS);
+  renderEntFiltered(en);
+}
+
+// ── CSV LOADER ────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('csv-input').addEventListener('change',function(e){
+    const file=e.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        loadCSV(ev.target.result);
+        showToast('✓ CSV cargado: '+file.name);
+      }catch(err){
+        showToast('✗ Error: '+err.message, true);
+      }
+      e.target.value='';
+    };
+    reader.readAsText(file,'UTF-8');
+  });
+});
+
+function showToast(msg, isErr=false){
+  const t=document.getElementById('csvToast');
+  t.textContent=msg;
+  t.style.background=isErr?'#dc2626':'#1a9e6a';
+  t.style.display='block';
+  setTimeout(()=>t.style.display='none',3000);
+}
+
+function parseCSV(text){
+  // detect separator
+  const firstLine=text.split('\n')[0];
+  const sep=firstLine.includes(';')?';':',';
+  const lines=text.trim().split('\n');
+  const headers=lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).filter(l=>l.trim()).map(line=>{
+    const vals=line.split(sep).map(v=>v.trim().replace(/^"|"$/g,''));
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=vals[i]||'');
+    return obj;
+  });
+}
+
+function loadCSV(text){
+  const RANGO_MAP={
+    '1) MENOR A $5.000':'<$5k','2) $5.001 a $10.000':'$5k-10k',
+    '3) $10.001 a $20.000':'$10k-20k','4) $20.001 a $35.000':'$20k-35k',
+    '5) $35.001 a $50.000':'$35k-50k','6) $50.001 a $100.000':'$50k-100k',
+    '7) $100.001 a $500.000':'$100k-500k','8) >$500.000':'>$500k',
+  };
+  const TRAMO_MAP={
+    '1) 0 a 30 dias':'0-30d','2) 31 a 60 dias':'31-60d','3) 61 a 90 dias':'61-90d',
+    '4) 91 a 180 dias':'91-180d','5) 181 a 360 dias':'181-360d','6) Mayor a 360 dias':'>360d',
+  };
+
+  const rows=parseCSV(text);
+  if(!rows.length) throw new Error('CSV vacío o sin datos');
+
+  // Detect column names flexibly
+  const sample=rows[0];
+  const keys=Object.keys(sample);
+  const find=(...opts)=>keys.find(k=>opts.some(o=>k.toLowerCase().includes(o.toLowerCase())))||null;
+
+  const COL={
+    entidad: find('entidad'),
+    rango: find('rango_deuda','rango deuda','rango'),
+    tramo: find('tramo_gestion','tramo gestión','tramo'),
+    casos: find('casos_activos','casos activos','casos'),
+    tels: find('telefonos_total','teléfonos_total','telefono'),
+    cont: find('telefonos_contactados','contactados','cont'),
+    sc: find('telefonos_sin_contacto','sin_contacto'),
+    c_si: find('contactado_sin_llamada','sin_llamada'),
+    c_1a3: find('contactado_1_a_3','1_a_3','1 a 3'),
+    c_4a6: find('contactado_4_a_6','4_a_6','4 a 6'),
+    c_mas6: find('contactado_mayor','mayor_6','>6'),
+  };
+
+  const missing=Object.entries(COL).filter(([k,v])=>!v && k!=='c_mas6').map(([k])=>k);
+  if(missing.length>3) throw new Error('No se reconocieron columnas: '+missing.join(', '));
+
+  const num=v=>parseFloat((v||'0').replace(/[.,]/g,m=>m===','&&v.includes('.')?'':m===','?'.':''))||0;
+
+  // Build new GRAIN
+  const grainMap={};
+  rows.forEach(r=>{
+    const ent=(r[COL.entidad]||'').trim();
+    const rangoRaw=(r[COL.rango]||'').trim();
+    const tramoRaw=(r[COL.tramo]||'').trim();
+    if(!ent) return;
+    const rango=RANGO_MAP[rangoRaw]||rangoRaw||'Sin rango';
+    const tramo=TRAMO_MAP[tramoRaw]||tramoRaw||'Sin tramo';
+    const key=`${ent}||${rango}||${tramo}`;
+    if(!grainMap[key]) grainMap[key]={entidad:ent,rango,tramo,casos:0,tels:0,cont:0,sc:0,c_si:0,c_1a3:0,c_4a6:0,c_mas6:0,pot:0,pct:0};
+    const g=grainMap[key];
+    g.casos+=num(r[COL.casos]);
+    g.tels+=num(r[COL.tels]);
+    g.cont+=num(r[COL.cont]);
+    g.sc+=num(r[COL.sc]);
+    g.c_si+=COL.c_si?num(r[COL.c_si]):0;
+    g.c_1a3+=COL.c_1a3?num(r[COL.c_1a3]):0;
+    g.c_4a6+=COL.c_4a6?num(r[COL.c_4a6]):0;
+    g.c_mas6+=COL.c_mas6?num(r[COL.c_mas6]):0;
+  });
+
+  // Replace GRAIN global
+  const newGrain=Object.values(grainMap).map(g=>({
+    ...g,
+    pot:g.c_si+g.c_1a3+g.c_4a6,
+    pct:g.tels?Math.round(g.cont/g.tels*1000)/10:0
+  }));
+
+  // Rebuild D (entity totals) from grain
+  const entMap={};
+  newGrain.forEach(g=>{
+    const e=g.entidad;
+    if(!entMap[e]) entMap[e]={casos:0,tels:0,cont:0,sc:0,c_si:0,c_1a3:0,c_4a6:0,c_mas6:0,pot:0,pct:0,tel_caso:0};
+    const d=entMap[e];
+    ['casos','tels','cont','sc','c_si','c_1a3','c_4a6','c_mas6','pot'].forEach(k=>d[k]+=g[k]);
+  });
+  Object.entries(entMap).forEach(([e,d])=>{
+    d.pct=d.tels?Math.round(d.cont/d.tels*1000)/10:0;
+    d.tel_caso=d.casos?Math.round(d.tels/d.casos*100)/100:0;
+  });
+
+  // Mutate globals
+  GRAIN.length=0; newGrain.forEach(g=>GRAIN.push(g));
+  Object.keys(D).forEach(k=>delete D[k]);
+  Object.entries(entMap).forEach(([k,v])=>D[k]=v);
+  ENTS.length=0; Object.keys(D).sort((a,b)=>a.localeCompare(b)).forEach(e=>ENTS.push(e));
+
+  // Reset filters
+  activeEnts=new Set(ENTS);
+  activeRangos=new Set(RANGOS);
+  activeTramos=new Set(TRAMOS);
+
+  // Re-render
+  cur='ALL';
+  buildSB();
+  updKPIs('ALL');
+  renderAll();
+}
+
+// Show loading state
+document.getElementById('cnt').innerHTML=`
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px;color:var(--muted)">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" opacity=".25"/><path d="M21 12a9 9 0 00-9-9"/></svg>
+    <span style="font-size:13px">Cargando datos...</span>
+  </div>`;
+
+fetch(CSV_URL)
+  .then(r=>{
+    if(!r.ok) throw new Error('No se pudo cargar el CSV ('+r.status+')');
+    return r.text();
+  })
+  .then(text=>{
+    loadCSV(text);
+    showToast('✓ Datos cargados correctamente');
+  })
+  .catch(err=>{
+    document.getElementById('cnt').innerHTML=`
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:10px;color:var(--red)">
+        <span style="font-size:24px">⚠</span>
+        <span style="font-size:13px;font-weight:600">Error al cargar datos</span>
+        <span style="font-size:11px;color:var(--muted)">${err.message}</span>
+        <span style="font-size:11px;color:var(--muted)">Verificá que el CSV esté en el repositorio</span>
+      </div>`;
+    console.error(err);
+  });
+</script>
+<div class="csv-toast" id="csvToast"></div>
+</body>
+</html>
